@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	MAX = 12
+	MAX = 18
 )
 
 func Flip(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -122,7 +122,19 @@ func Flip(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 
-		err = model.Gamble(m.Author.Username, m.GuildID, 0)
+		userPoints, err := model.GetPoints(m.Author.Username)
+		if err != nil {
+			s.ChannelMessageSendEmbed(
+				m.ChannelID,
+				embed.NewGenericEmbed(
+					"Unexpected error",
+					err.Error(),
+				),
+			)
+			return
+		}
+
+		err = model.Gamble(m.Author.Username, m.GuildID, userPoints-(points/2))
 		if err != nil {
 			s.ChannelMessageSendEmbed(
 				m.ChannelID,
