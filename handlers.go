@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	MAX = 18
+	MAX = 12
 )
 
 func Flip(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -35,7 +36,7 @@ func Flip(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if strings.HasPrefix(m.Message.Content, "!points") {
-		points, err := model.GetPoints(m.Author.Username)
+		points, err := model.GetPoints(m.Author.Username, m.GuildID)
 		if err != nil {
 			s.ChannelMessageSendEmbed(
 				m.ChannelID,
@@ -99,8 +100,20 @@ func Flip(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		posibilities := []bool{true, false}
 		won := posibilities[rand.Intn(len(posibilities))]
+		userPoints, err := model.GetPoints(m.Author.Username, m.GuildID)
+		if err != nil {
+			s.ChannelMessageSendEmbed(
+				m.ChannelID,
+				embed.NewGenericEmbed(
+					"Unexpected error",
+					err.Error(),
+				),
+			)
+			return
+		}
+
 		if won {
-			err := model.Gamble(m.Author.Username, m.GuildID, points)
+			err := model.Gamble(m.Author.Username, m.GuildID, userPoints+points)
 			if err != nil {
 				s.ChannelMessageSendEmbed(
 					m.ChannelID,
@@ -122,19 +135,11 @@ func Flip(s *discordgo.Session, m *discordgo.MessageCreate) {
 			return
 		}
 
-		userPoints, err := model.GetPoints(m.Author.Username)
-		if err != nil {
-			s.ChannelMessageSendEmbed(
-				m.ChannelID,
-				embed.NewGenericEmbed(
-					"Unexpected error",
-					err.Error(),
-				),
-			)
-			return
+		result := userPoints - (points - 2)
+		if result < 0 {
+			result = 0
 		}
-
-		err = model.Gamble(m.Author.Username, m.GuildID, userPoints-(points/2))
+		err = model.Gamble(m.Author.Username, m.GuildID, result)
 		if err != nil {
 			s.ChannelMessageSendEmbed(
 				m.ChannelID,
@@ -149,6 +154,7 @@ func Flip(s *discordgo.Session, m *discordgo.MessageCreate) {
 		until := time.Now().Add(time.Minute * time.Duration(points*5))
 		err = s.GuildMemberTimeout(m.GuildID, m.Author.ID, &until)
 		if err != nil {
+			log.Println(err)
 			s.ChannelMessageSendEmbed(
 				m.ChannelID,
 				embed.NewGenericEmbed(

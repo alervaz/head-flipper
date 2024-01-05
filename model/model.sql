@@ -6,7 +6,8 @@ CREATE TABLE servers (
 );
 
 CREATE TABLE users (
-  username TEXT PRIMARY KEY UNIQUE,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT,
   points INTEGER,
   serverId TEXT,
   FOREIGN KEY(serverId) REFERENCES servers(id)
